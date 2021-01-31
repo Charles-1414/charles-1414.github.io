@@ -1,0 +1,319 @@
+<style>
+    canvas {background: #eee};
+</style>
+<canvas id="myCanvas" width="1000" height="600"></canvas>
+<script>
+    var canvas=document.getElementById("myCanvas");
+    var ctx=canvas.getContext("2d");
+
+
+    var ballRadius=20;
+    var x=30+Math.random()*(canvas.width-60);
+    var y=canvas.height-50;
+    var dx=4*(Math.random()<0.5?-1:1);
+    var dy=-4;
+    var dxlength=4;
+    var dylength=4;
+
+    var speedupTimer=0;
+    var fireTimer=0;
+    var speedup=2;
+    var fire=2;
+
+    function getRndColor() {
+        var r = 255*Math.random()|0,
+            g = 255*Math.random()|0,
+            b = 255*Math.random()|0;
+        return 'rgb(' + r + ',' + g + ',' + b + ')';
+    }
+
+    function drawBall(){
+        ctx.beginPath();
+        ctx.arc(x,y,ballRadius,0,Math.PI*2);
+        if(fireTimer>0){
+            ctx.fillStyle="#ff7d00"
+        }
+        else{
+            ctx.fillStyle=getRndColor();
+        }
+        ctx.fill();
+        ctx.closePath();
+    }
+    
+
+    var paddleHeight=30;
+    var paddleWidth=250;
+    var paddleX=x-paddleWidth/2;
+
+    function drawPaddle(){
+        ctx.beginPath();
+        ctx.rect(paddleX,canvas.height-paddleHeight,paddleWidth,paddleHeight);
+        ctx.fillStyle="#0095DD";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+
+    var rightPressed=false;
+    var leftPressed=false;
+
+    function keyDownHandler(e){
+        if(e.key=="Right"||e.key=="ArrowRight"){
+            rightPressed=true;
+        }
+        else if(e.key=="Left"||e.key=="ArrowLeft"){
+            leftPressed=true;
+        }
+        else if(e.key=="1"){
+            if(speedup>0&&speedupTimer<=0){
+                speedup-=1;
+                speedupTimer=3000;
+            }
+        }
+        else if(e.key=="2"){
+            if(fire>0&&fireTimer<=0){
+                fire-=1;
+                fireTimer=3000;
+            }
+        }
+    }
+
+    function keyUpHandler(e){
+        if(e.key=="Right"||e.key=="ArrowRight"){
+            rightPressed=false;
+        }
+        else if(e.key=="Left"||e.key=="ArrowLeft"){
+            leftPressed=false;
+        }
+    }
+
+    function mouseMoveHandler(e){
+        var relativeX=e.clientX-canvas.offsetLeft;
+        if(relativeX>0&&relativeX<canvas.width){
+            paddleX=relativeX-paddleWidth/2;
+        }
+    }
+    function touchMoveHandler(e){
+        e=e.touches[0];
+        var relativeX=e.clientX-canvas.offsetLeft;
+        if(relativeX>0&&relativeX<canvas.width){
+            paddleX=relativeX-paddleWidth/2;
+        }
+    }
+
+    document.addEventListener("keydown",keyDownHandler,false);
+    document.addEventListener("keyup",keyUpHandler,false);
+    document.addEventListener("mousemove",mouseMoveHandler,false);
+    document.addEventListener("touchmove", touchMoveHandler, false);
+
+    var brickRowCount=3;
+    var brickColumnCount=6;
+    var brickWidth=120;
+    var brickHeight=40;
+    var brickPadding=30;
+    var brickOffsetTop=110;
+    var brickOffsetLeft=70;
+    var color=["#ffffff","#00ff14","#f3ff00","#f300ff"]
+
+    //init bricks array
+    var bricks=[];
+    var hardness=[];
+    var remainBrick=brickRowCount*brickColumnCount;
+    for(var c=0;c<brickColumnCount;c++){
+        bricks[c]=[];
+        status[c]=[];
+        hardness[c]=[]
+        for(var r=0;r<brickRowCount;r++){
+            bricks[c][r]={x:0,y:0};
+            hardness[c][r]=brickRowCount-r;
+        }
+    }
+
+    function drawBricks(){
+        for(var c=0;c<brickColumnCount;c++){
+            for(var r=0;r<brickRowCount;r++){
+                if(hardness[c][r]){
+                    var brickX=(c*(brickWidth+brickPadding))+brickOffsetLeft;
+                    var brickY=(r*(brickHeight+brickPadding))+brickOffsetTop;
+                    bricks[c][r].x=brickX;
+                    bricks[c][r].y=brickY;
+                    ctx.beginPath();
+                    ctx.rect(brickX,brickY,brickWidth,brickHeight);
+                    ctx.fillStyle=color[hardness[c][r]];
+                    ctx.fill();
+                    ctx.closePath();
+                }
+            }
+        }
+    }
+    drawBricks();
+
+    function drawSkill(){
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "#0095DD";
+        ctx.strokeText("Skills", canvas.width-150, 20);
+        ctx.strokeText("Speed UP: "+speedup, canvas.width-150, 50);
+        ctx.strokeText("Fire: "+fire, canvas.width-150, 80);
+    }
+    drawSkill();
+
+
+    var life=3;
+    function drawLife(){
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "#0095DD";
+        ctx.strokeText("Remaining life: "+life, 8, 20);
+    }
+
+    drawLife();
+
+
+    var score=0;
+    function drawScore(){
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "#0095DD";
+        ctx.strokeText("Score: "+score, 8, 50);
+    }
+
+    drawScore();
+
+    var remainTime=30000; //in miliseconds
+    function drawTimer(){
+        remainTime-=10;
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "#0095DD";
+        ctx.strokeText("Time left: "+remainTime/1000+" sec", 8, 80);
+    }
+
+    drawTimer();
+
+
+    function gameOver(){
+        ctx.font = "40px Arial";
+        ctx.strokeText("Game over!", canvas.width/2-140, canvas.height/2-30);
+        ctx.strokeText("Your score: "+score, canvas.width/2-160, canvas.height/2+30);
+        clearInterval(interval);
+    }
+
+    function gameWon(){
+        ctx.font = "40px Arial";
+        ctx.strokeText("You won!", canvas.width/2-140, canvas.height/2-30);
+        score+=life*100+Math.floor(remainTime/1000*15);
+        ctx.strokeText("Your score: "+score, canvas.width/2-160, canvas.height/2+30);
+        clearInterval(interval);
+    }
+
+
+    function draw(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+
+        for(var c=0;c<brickColumnCount;c++){
+            for(var r=0;r<brickRowCount;r++){
+                if(hardness[c][r]){
+                    var b=bricks[c][r];
+                    if(x+ballRadius>b.x&&x-ballRadius<b.x+brickWidth&&y+ballRadius>b.y&&y-ballRadius<b.y+brickHeight){
+                        score+=10*hardness[c][r];
+                        hardness[c][r]--;
+                        if(hardness[c][r]==0){
+                            remainBrick--;
+                            if(remainBrick==0){
+                                drawLife();
+                                drawScore();
+                                gameWon();
+                            }
+                        }
+                        if(fireTimer<=0){
+                            dy=-dy;
+                        }
+                    }
+                }
+            }
+        }
+        drawBricks();
+
+        drawBall();
+        if(x+dx>canvas.width-ballRadius||x+dx<ballRadius){
+            dx=-dx;
+        }
+        if(y+dy<ballRadius){
+            dy=-dy;
+        }
+        else if(y+dy>canvas.height-paddleHeight-ballRadius){
+            if(x>paddleX&&x<=paddleX+paddleWidth/2){dy=-dy;dx=-dxlength;}
+            else if(x>paddleX+paddleWidth/2&&x<paddleX+paddleWidth){dy=-dy;dx=dxlength;}
+            else{
+                if(y+dy>canvas.height-ballRadius){
+                    life-=1;
+                    if(life==0){
+                        drawLife();
+                        drawScore();
+                        gameOver();
+                    }
+                    else{
+                        x=Math.min(paddleX+paddleWidth/2,canvas.width-ballRadius-10);
+                        y=canvas.height-50;
+                    }
+                }
+            }
+        }
+        x+=dx;
+        y+=dy;
+
+        drawPaddle();
+        if(rightPressed){
+            paddleX+=7;
+            if(paddleX+paddleWidth>canvas.width){
+                paddleX=canvas.width-paddleWidth;
+            }
+        }
+        else if(leftPressed){
+            paddleX-=7;
+            if(paddleX<0){
+                paddleX=0;
+            }
+        }
+        
+        drawSkill();
+        drawLife();
+        drawScore();
+        drawTimer();
+        if(remainTime==0){
+            gameOver();
+        }
+
+        if(fireTimer>0){
+            fireTimer-=10;
+        }
+        if(speedupTimer>0){
+            speedupTimer-=10;
+            x+=dx;
+            y+=dy;
+        }
+    }
+
+    var interval=setInterval(draw,10);
+
+    function speedUpSkill(){
+        if(speedup>0&&speedupTimer<=0){
+            speedup-=1;
+            speedupTimer=3000;
+        }
+    }
+    function fireSkill(){
+        if(fire>0&&fireTimer<=0){
+            fire-=1;
+            fireTimer=3000;
+        }
+    }
+    function restart(){
+        window.location.reload();
+    }
+</script>
+<br />
+<button onclick="speedUpSkill()" style="font-size:40px">Speed UP</button>
+<button onclick="fireSkill()" style="font-size:40px">Fire</button>
+<button onclick="restart()" style="font-size:40px">Restart Game</button>
+<br />
+<a href="guide.html" style="font-size:40px">Game Guide</a>
+<br />
+<p>Copyright &copy; 2021 Charles</p>
